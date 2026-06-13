@@ -3,6 +3,9 @@ import requests
 from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client
+from media_config import MEDIA_TO_TRACK
+from discord_alert import alert_crawler_start, alert_crawler_finished, alert_crawler_error
+import time
 
 load_dotenv()
 
