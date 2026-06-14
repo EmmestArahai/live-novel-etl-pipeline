@@ -142,49 +142,77 @@ def update_media_in_db(media_id, anilist_data):
 
 
 def run_crawler():
-    """Main crawler: lấy tất cả media trong DB, update từ AniList"""
+    """Main crawler"""
+    start_time = time.time()
+    
     print("\n🚀 Bắt đầu crawler...\n")
     
-    # Lấy danh sách media cần update
-    media_list = supabase.table("media").select("id, anilist_id, title").execute()
+    # ⭐ Thêm print debug
+    print("[DEBUG] Calling alert_crawler_start()...")
+    try:
+        alert_crawler_start()
+        print("[DEBUG] alert_crawler_start() completed")
+    except Exception as e:
+        print(f"[DEBUG] ERROR in alert_crawler_start(): {e}")
     
-    if not media_list.data:
-        print("❌ Không có media nào trong DB")
-        return
-    
-    total = len(media_list.data)
-    updated_count = 0
-    changed_count = 0
-    
-    for idx, media in enumerate(media_list.data, 1):
-        print(f"[{idx}/{total}] Crawling: {media['title']} (AniList ID: {media['anilist_id']})")
+    try:
+        # Lấy danh sách media cần update
+        media_list = supabase.table("media").select("id, anilist_id, title").execute()
         
-        # Fetch từ AniList
-        anilist_data = fetch_media_from_anilist(media["anilist_id"])
+        if not media_list.data:
+            print("❌ Không có media nào trong DB")
+            alert_crawler_error("Không có media nào trong DB")
+            return
         
-        if anilist_data:
-            # Update DB
-            result = update_media_in_db(media["id"], anilist_data)
+        total = len(media_list.data)
+        updated_count = 0
+        changed_count = 0
+        
+        for idx, media in enumerate(media_list.data, 1):
+            print(f"[{idx}/{total}] Crawling: {media['title']} (AniList ID: {media['anilist_id']})")
             
-            if result["updated"]:
-                updated_count += 1
-                if result["changes"]:
-                    changed_count += 1
-                    print(f"  ✅ Cập nhật: {result['changes']}")
-                else:
-                    print(f"  ✓ Không có thay đổi")
-        else:
-            print(f"  ⚠️  Fetch AniList thất bại")
+            anilist_data = fetch_media_from_anilist(media["anilist_id"])
+            
+            if anilist_data:
+                result = update_media_in_db(media["id"], anilist_data)
+                
+                if result["updated"]:
+                    updated_count += 1
+                    if result["changes"]:
+                        changed_count += 1
+                        print(f"  ✅ Cập nhật: {result['changes']}")
+                    else:
+                        print(f"  ✓ Không có thay đổi")
+            else:
+                print(f"  ⚠️  Fetch AniList thất bại")
+            
+            time.sleep(1)
         
-        # Delay để tránh rate limit
-        import time
-        time.sleep(1)
-    
-    print(f"\n📊 Kết quả:")
-    print(f"  - Tổng media: {total}")
-    print(f"  - Cập nhật thành công: {updated_count}")
-    print(f"  - Có thay đổi: {changed_count}")
-
+        duration = time.time() - start_time
+        
+        print(f"\n📊 Kết quả:")
+        print(f"  - Tổng media: {total}")
+        print(f"  - Cập nhật thành công: {updated_count}")
+        print(f"  - Có thay đổi: {changed_count}")
+        print(f"  - Thời gian: {duration:.1f}s")
+        
+        # ⭐ Thêm print debug
+        print("[DEBUG] Calling alert_crawler_finished()...")
+        try:
+            alert_crawler_finished(total, changed_count, duration)
+            print("[DEBUG] alert_crawler_finished() completed")
+        except Exception as e:
+            print(f"[DEBUG] ERROR in alert_crawler_finished(): {e}")
+        
+    except Exception as e:
+        print(f"\n❌ Lỗi crawler: {e}")
+        print("[DEBUG] Calling alert_crawler_error()...")
+        try:
+            alert_crawler_error(str(e))
+            print("[DEBUG] alert_crawler_error() completed")
+        except Exception as alert_e:
+            print(f"[DEBUG] ERROR in alert_crawler_error(): {alert_e}")
+        raise
 
 if __name__ == "__main__":
     run_crawler()
