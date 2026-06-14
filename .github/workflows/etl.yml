@@ -2,7 +2,7 @@ name: ETL Pipeline - Anime Tracker
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 00:00 UTC mỗi ngày
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -23,9 +23,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      - name: Debug - Check Secrets
+        run: |
+          echo "SUPABASE_URL: ${{ secrets.SUPABASE_URL }}"
+          echo "DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}"
+      
       - name: Run crawler
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python crawler.py
+        run: |
+          echo "Starting crawler..."
+          python crawler.py
+          echo "Crawler finished!"
